@@ -36,14 +36,23 @@ class RedisBroker(MessageBroker):
                 else:
                     # Use rediss:// for SSL connections
                     protocol = "rediss://" if self.config.get('ssl', False) else "redis://"
+                    
+                    # Prepare connection kwargs
+                    connection_kwargs = {
+                        'username': self.config.get('username'),
+                        'password': self.config.get('password'),
+                        'decode_responses': True,
+                        'socket_keepalive': True,
+                        'retry_on_timeout': True,
+                    }
+                    
+                    # Add SSL configuration if enabled
+                    if self.config.get('ssl', False):
+                        connection_kwargs['ssl_cert_reqs'] = self.config.get('ssl_cert_reqs')
+                    
                     self.client = await aioredis.Redis.from_url(
                         f"{protocol}{self.config.get('host', 'localhost')}:{self.config.get('port', 6379)}",
-                        username=self.config.get('username'),
-                        password=self.config.get('password'),
-                        decode_responses=True,
-                        socket_keepalive=True,
-                        retry_on_timeout=True,
-                        ssl_cert_reqs=self.config.get('ssl_cert_reqs')
+                        **connection_kwargs
                     )
                     self._pubsub = self.client.pubsub()
                 await self.client.ping()
