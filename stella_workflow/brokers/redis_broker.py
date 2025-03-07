@@ -143,6 +143,7 @@ class RedisBroker(MessageBroker):
         
         # Start with the earliest ID (get all messages)
         last_id = "0"
+        processed_ids = set()  # Track processed message IDs
         
         logger.debug(f"Created subscription for topic: {topic}")
         logger.debug(f"Listening on stream key: {stream_key}")
@@ -162,6 +163,11 @@ class RedisBroker(MessageBroker):
                     logger.debug(f"Processing initial messages from stream {stream_name}")
                     for message_id, data in message_list:
                         try:
+                            # Skip if already processed
+                            if message_id in processed_ids:
+                                logger.debug(f"Skipping already processed message {message_id}")
+                                continue
+                                
                             logger.debug(f"Processing initial message {message_id}: {data}")
                             
                             # Convert bytes keys to strings if needed
@@ -190,6 +196,9 @@ class RedisBroker(MessageBroker):
                             
                             # Process message
                             await callback(message)
+                            
+                            # Mark as processed
+                            processed_ids.add(message_id)
                             
                             # Update last seen ID
                             last_id = message_id
@@ -224,6 +233,11 @@ class RedisBroker(MessageBroker):
                                 logger.debug(f"Processing messages from stream {stream_name}")
                                 for message_id, data in message_list:
                                     try:
+                                        # Skip if already processed
+                                        if message_id in processed_ids:
+                                            logger.debug(f"Skipping already processed message {message_id}")
+                                            continue
+                                            
                                         logger.debug(f"Processing message {message_id}: {data}")
                                         
                                         # Convert bytes keys to strings if needed
@@ -253,6 +267,9 @@ class RedisBroker(MessageBroker):
                                         # Process message
                                         await callback(message)
                                         
+                                        # Mark as processed
+                                        processed_ids.add(message_id)
+                                        
                                         # Update last seen ID
                                         last_id = message_id
                                         logger.debug(f"Updated last_id to {last_id}")
@@ -261,6 +278,7 @@ class RedisBroker(MessageBroker):
                                         logger.error(f"Error processing message {message_id}: {str(e)}")
                     
                 except asyncio.CancelledError:
+                    logger.debug("Subscription handler cancelled")
                     break
                 except asyncio.TimeoutError:
                     # No notification, continue waiting
@@ -271,7 +289,9 @@ class RedisBroker(MessageBroker):
                     
         finally:
             try:
+                logger.debug("Cleaning up subscription")
                 await pubsub.unsubscribe(notification_channel)
+                await pubsub.aclose()
             except Exception as e:
                 logger.error(f"Error cleaning up subscription: {str(e)}")
 

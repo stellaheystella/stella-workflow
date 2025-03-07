@@ -209,6 +209,7 @@ class stella_agent:
                 dependency_messages[source] = {
                     "source": source,
                     "data": message_data.get('data', {}),
+                    "id": message_data.get('id'),
                     "received_at": datetime.now().isoformat()
                 }
                 logger.debug(f"{Colors.ORANGE}{self.name}: Current dependency messages: {dependency_messages}{Colors.ENDC}")

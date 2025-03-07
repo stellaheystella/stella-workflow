@@ -98,6 +98,24 @@ async def setup_workflow(
                 logger.debug("Processor skipping message from self")
                 return None
 
+            # Get message ID from the dependency messages
+            message_id = (
+                message.get("dependency_messages", {})
+                .get("sensor", {})
+                .get("id")
+            )
+            if not message_id:
+                logger.debug("No message ID found in dependency messages")
+                return None
+
+            # Get current state to check processed messages
+            current_state = await processor_agent.get_state()
+            processed_messages = current_state.get("processed_messages", [])
+            
+            if message_id in processed_messages:
+                logger.debug(f"Already processed message {message_id}")
+                return None
+
             # Extract the sensor data
             sensor_data = (
                 message.get("dependency_messages", {})
@@ -115,13 +133,11 @@ async def setup_workflow(
             # Mark the processor as called
             processor_called = True
 
-            # Get current state
-            current_state = await processor_agent.get_state()
-            messages_processed = current_state.get("messages_processed", 0) + 1
-
-            # Update state to track this call
+            # Update state to track this call and processed message
+            processed_messages.append(message_id)
             await processor_agent.update_state(
-                messages_processed=messages_processed,
+                messages_processed=len(processed_messages),
+                processed_messages=processed_messages,
                 last_processed_time=datetime.now().isoformat(),
                 status="running"
             )
