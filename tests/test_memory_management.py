@@ -111,7 +111,7 @@ async def setup_workflow(
             # Get current state to check processed messages
             current_state = await processor_agent.get_state()
             processed_messages = current_state.get("processed_messages", [])
-            
+
             if message_id in processed_messages:
                 logger.debug(f"Already processed message {message_id}")
                 return None

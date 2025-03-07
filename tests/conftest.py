@@ -8,7 +8,8 @@ import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
 
-from stella_workflow.workflow import BrokerFactory, stella_agent
+from stella_workflow.brokers.base import BrokerFactory
+from stella_workflow.workflow import stella_agent
 
 # Load environment variables from .env file
 load_dotenv()
