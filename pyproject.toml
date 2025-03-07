@@ -1,0 +1,62 @@
+[tool.poetry]
+name = "stella-workflow"
+version = "0.1.0"
+description = "A workflow engine for AI agents"
+authors = ["Vinay karode <vinaykarode@stellaheystella.com>"]
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/stellaheystella/stella-workflow"
+documentation = "https://github.com/stellaheystella/stella-workflow/docs"
+keywords = ["workflow", "ai", "agents", "async", "redis"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+packages = [
+    { include = "stella_workflow" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<4.0"
+redis = "^5.2.1"
+networkx = "^3.4.2"
+matplotlib = "^3.10.0"
+pandas = "^2.2.3"
+pydantic = "^2.6.4"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-asyncio = "^0.25.3"
+openai = "^1.14.0"
+python-dotenv = "^1.0.0"
+fakeredis = "^2.27.0"
+ruff = "^0.3.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "integration: marks tests that require external services (like OpenAI)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+select = ["E", "F", "I", "W", "N", "B", "C4", "UP", "ANN", "RUF"]
+ignore = ["ANN101", "ANN102", "ANN401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto" 

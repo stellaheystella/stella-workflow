@@ -1,0 +1,14 @@
+[
+  {
+    "type": "system",
+    "severity": "high",
+    "message": "High memory usage detected: 55.46%",
+    "timestamp": "2025-03-05T02:42:44.996080"
+  },
+  {
+    "type": "alert",
+    "severity": "critical",
+    "message": "Alert: Network latency high",
+    "timestamp": "2025-03-05T02:42:44.996094"
+  }
+]

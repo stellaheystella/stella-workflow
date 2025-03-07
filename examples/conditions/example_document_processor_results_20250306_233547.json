@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-03-06T23:36:11.714719",
+  "total_documents": 3,
+  "successful_documents": 1,
+  "failed_documents": 2,
+  "results": [
+    {
+      "id": "INV-001",
+      "type": "invoice",
+      "processed_at": "2025-03-06T23:31:01.839019",
+      "total_amount": 1000.0,
+      "tax_amount": 200.0,
+      "vendor": "Acme Corp",
+      "status": "archived",
+      "archived_at": "2025-03-06T23:35:53.885333",
+      "archive_id": "ARCH-INV-001"
+    },
+    {
+      "id": "RCP-001",
+      "type": "receipt",
+      "status": "failed",
+      "processed_at": "2025-03-06T23:36:03.946013"
+    },
+    {
+      "id": "CTR-001",
+      "type": "contract",
+      "status": "failed",
+      "processed_at": "2025-03-06T23:36:11.712727"
+    }
+  ]
+}

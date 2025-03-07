@@ -1,0 +1,13 @@
+[
+  {
+    "id": 4,
+    "price": 19.99,
+    "category": "home",
+    "price_with_tax": 21.99,
+    "processed_at": "2025-03-05T02:17:03.112705",
+    "is_valid": false,
+    "validation_errors": [
+      "Missing required field: name"
+    ]
+  }
+]

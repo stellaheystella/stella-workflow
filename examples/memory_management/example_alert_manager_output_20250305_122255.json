@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-03-05T12:22:55.516380",
+  "total_alerts": 38,
+  "state": {
+    "alert_count": 38,
+    "last_alert_time": "2025-03-05T12:22:54.759215",
+    "status": "active"
+  },
+  "latest_alerts": [
+    {
+      "source": "pressure_sensor",
+      "value": 1006.83,
+      "threshold": 1010.0,
+      "severity": "medium",
+      "message": "Anomaly detected in pressure_sensor: 1006.83 exceeds threshold 1010.0",
+      "timestamp": "2025-03-05T12:22:54.759177"
+    }
+  ]
+}

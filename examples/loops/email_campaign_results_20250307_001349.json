@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-03-07T00:14:11.348399",
+  "total_campaigns": 2,
+  "successful_campaigns": 2,
+  "partial_campaigns": 0,
+  "failed_campaigns": 0,
+  "results": [
+    {
+      "campaign_type": "newsletter",
+      "total_users": 4,
+      "emails_sent": 4,
+      "emails_delivered": 5,
+      "completion_time": "2025-03-07T00:14:02.264241",
+      "status": "completed"
+    },
+    {
+      "campaign_type": "product_update",
+      "total_users": 4,
+      "emails_sent": 4,
+      "emails_delivered": 6,
+      "completion_time": "2025-03-07T00:14:10.875542",
+      "status": "completed"
+    }
+  ]
+}
