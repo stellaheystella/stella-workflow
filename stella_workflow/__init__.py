@@ -8,9 +8,9 @@ __all__ = [
     'BrokerFactory',
     'ColoredFormatter',
     'Colors',
+    'StellaAgent',
     'in_loop',
     'logger',
-    'StellaAgent',
 ]
 
 # Alias for backward compatibility
