@@ -6,8 +6,8 @@ from .workflow import ColoredFormatter, Colors, StellaAgent, logger
 
 __all__ = [
     'BrokerFactory',
-    'Colors',
     'ColoredFormatter',
+    'Colors',
     'in_loop',
     'logger',
     'StellaAgent',
