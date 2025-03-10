@@ -11,24 +11,28 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: prod
+    environment:
+      name: pypi
+      url: https://pypi.org/p/stella-workflow
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    - name: Install dependencies
+    - name: Install Poetry
       run: |
-        python -m pip install --upgrade pip
-        pip install build poetry
-    - name: Install project dependencies
+        curl -sSL https://install.python-poetry.org | python - -y
+    - name: Configure Poetry
       run: |
         poetry config virtualenvs.create false
-        poetry install
+        poetry config repositories.pypi https://upload.pypi.org/legacy/
+    - name: Install dependencies
+      run: |
+        poetry install --no-interaction
     - name: Build package
       run: |
-        python -m build
+        poetry build
         echo "Built files in dist/:"
         ls -l dist/
         echo "Wheel file contents:"
@@ -36,8 +40,8 @@ jobs:
         echo "Metadata contents:"
         unzip -p dist/*.whl "*.dist-info/METADATA" || true
     - name: Publish package
-      uses: pypa/gh-action-pypi-publish@v1.8.11
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        verify-metadata: true  # Use kebab-case as per warning
         verbose: true
+        verify-metadata: true
     # No need for username/password with Trusted Publishers 
