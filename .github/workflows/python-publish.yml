@@ -17,15 +17,25 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'  # Be explicit about Python version
+        python-version: '3.11'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install poetry
+    - name: Configure poetry
+      run: |
+        poetry config virtualenvs.create false
     - name: Build package
       run: |
+        poetry install
         poetry build
-        ls -l dist/  # List contents of dist directory for debugging
+        echo "Built files in dist/:"
+        ls -l dist/
+        echo "Wheel file contents:"
+        unzip -l dist/*.whl
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@v1.8.11
+      with:
+        verbose: true
+        verify_metadata: true
     # No need for username/password with Trusted Publishers 
