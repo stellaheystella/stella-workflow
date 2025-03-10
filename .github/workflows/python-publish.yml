@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write  # Required for Trusted Publishing
 
 jobs:
   deploy:
@@ -16,15 +17,15 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.11'  # Be explicit about Python version
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build
+        pip install poetry
     - name: Build package
-      run: python -m build
+      run: |
+        poetry build
+        ls -l dist/  # List contents of dist directory for debugging
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@v1.8.11
-      with:
-        user: ${{ secrets.PYPI_USERNAME }}
-        password: ${{ secrets.PYPI_PASSWORD }} 
+    # No need for username/password with Trusted Publishers 
