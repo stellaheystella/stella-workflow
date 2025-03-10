@@ -21,21 +21,23 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install poetry
-    - name: Configure poetry
+        pip install build poetry
+    - name: Install project dependencies
       run: |
         poetry config virtualenvs.create false
+        poetry install
     - name: Build package
       run: |
-        poetry install
-        poetry build
+        python -m build
         echo "Built files in dist/:"
         ls -l dist/
         echo "Wheel file contents:"
         unzip -l dist/*.whl
+        echo "Metadata contents:"
+        unzip -p dist/*.whl "*.dist-info/METADATA" || true
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@v1.8.11
       with:
+        verify-metadata: true  # Use kebab-case as per warning
         verbose: true
-        verify_metadata: true
     # No need for username/password with Trusted Publishers 
