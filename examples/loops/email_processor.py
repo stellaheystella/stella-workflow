@@ -29,12 +29,13 @@ import os
 import sys
 import uuid
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any
+
 from dotenv import load_dotenv
 
-from stella_workflow.workflow import stella_agent
-from stella_workflow.loop import in_loop
 from stella_workflow.brokers import RedisBroker
+from stella_workflow.loop import in_loop
+from stella_workflow.workflow import stella_agent
 
 # Load environment variables
 load_dotenv()
@@ -56,7 +57,7 @@ workflow_topic = f"bulk_email_processor_{uuid.uuid4().hex[:8]}"
 output_filename = "email_campaign_results.json"
 email_delay = float(os.getenv("EMAIL_DELAY", "0.5"))  # Delay between emails
 
-def get_redis_config():
+def get_redis_config() -> dict[str, Any]:
     """Get Redis configuration from environment variables"""
     return {
         "host": os.getenv("REDIS_HOST", "localhost"),
@@ -68,7 +69,7 @@ def get_redis_config():
         "ssl_cert_reqs": os.getenv("REDIS_SSL_CERT_REQS", "none")
     }
 
-def get_sample_users():
+def get_sample_users() -> list[dict[str, Any]]:
     """Generate sample user data for the example"""
     return [
         {
@@ -118,29 +119,32 @@ def get_sample_users():
         }
     ]
 
-async def setup_workflow(broker, topic: str, campaign_type: str):
+async def setup_workflow(broker: RedisBroker, topic: str, campaign_type: str) -> None:
     """Set up the email processing workflow"""
     # Clear any existing agents
     stella_agent.clear_agents()
-    
+
     # Define the user list agent
     @stella_agent(name="user_list", broker=broker, topic=topic)
-    async def user_list():
+    async def user_list() -> dict[str, Any] | None:
         """Fetch the list of users for the email campaign"""
         try:
-            # Get current state
-            state = await user_list.get_state()
-            
             # In a real application, this would fetch users from a database
             # For this example, we'll use sample data
             users = get_sample_users()
-            
+
             # Filter users based on campaign type
             if campaign_type == "newsletter":
-                users = [user for user in users if user["preferences"]["newsletter"]]
+                users = [
+                    user for user in users
+                    if user["preferences"]["newsletter"]
+                ]
             elif campaign_type == "product_update":
-                users = [user for user in users if user["preferences"]["product_updates"]]
-            
+                users = [
+                    user for user in users
+                    if user["preferences"]["product_updates"]
+                ]
+
             # Prepare the output
             output = {
                 "users": users,
@@ -148,7 +152,7 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                 "campaign_type": campaign_type,
                 "timestamp": datetime.now().isoformat()
             }
-            
+
             # Update state
             await user_list.update_state(
                 users_count=len(users),
@@ -156,52 +160,65 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                 last_run=datetime.now().isoformat(),
                 status="completed"
             )
-            
+
             # Store the user list in memory
             await user_list.set_memory("user_list", output)
-            
+
+            # Log collection metrics
             logger.info(f"Fetched {len(users)} users for {campaign_type} campaign")
             return output
         except Exception as e:
-            logger.error(f"Error fetching user list: {str(e)}")
+            logger.error(f"Error fetching user list: {e!s}")
             return None
-    
+
     # Define the email sender agent with loop
     @in_loop(
         loop_name="email_loop",
-        exit_condition="message.get('state', {}).get('position', 0) >= message['dependency_messages']['user_list']['data']['total'] - 1",
+        exit_condition=(
+            "message.get('state', {}).get('position', 0) >= "
+            "message['dependency_messages']['user_list']['data']['total'] - 1"
+        ),
         position=0
     )
-    @stella_agent(name="email_sender", broker=broker, topic=topic, depends_on=["user_list"])
-    async def email_sender(message):
+    @stella_agent(
+        name="email_sender",
+        broker=broker,
+        topic=topic,
+        depends_on=["user_list"]
+    )
+    async def email_sender(message: dict[str, Any]) -> dict[str, Any] | None:
         """Send emails to users in a loop"""
         try:
             # Skip if message is not from our dependency
             source = message.get("source")
             if source != "user_list" and not source.startswith("email_sender"):
                 return None
-            
+
             # Extract the user list data
-            user_list_data = message.get("dependency_messages", {}).get("user_list", {}).get("data", {})
+            user_list_data = (
+                message.get("dependency_messages", {})
+                .get("user_list", {})
+                .get("data", {})
+            )
             users = user_list_data.get("users", [])
             campaign_type = user_list_data.get("campaign_type", "")
-            
+
             # Get current state and position
             state = await email_sender.get_state()
             position = state.get("position", 0)
-            
+
             logger.info(f"Email sender processing position: {position}")
-            
+
             # Check if we have users at this position
             if position < len(users):
                 user = users[position]
-                
+
                 # In a real application, this would send an actual email
                 # For this example, we'll simulate sending
-                
+
                 # Add a small delay to simulate email sending
                 await asyncio.sleep(email_delay)
-                
+
                 # Prepare email content based on campaign type
                 if campaign_type == "newsletter":
                     subject = "Your Weekly Newsletter"
@@ -212,7 +229,7 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                 else:
                     subject = "Important Information"
                     content = f"Hello {user['name']}, we have important information for you!"
-                
+
                 # Prepare the output
                 output = {
                     "user_id": user.get("id"),
@@ -224,7 +241,7 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                     "has_more": position < len(users) - 1,
                     "timestamp": datetime.now().isoformat()
                 }
-                
+
                 # Update state with new position for next iteration
                 await email_sender.update_state(
                     position=position + 1,
@@ -232,21 +249,21 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                     last_email=user.get("email"),
                     status="active"
                 )
-                
+
                 # Store the email in memory
                 await email_sender.set_memory(f"email_{user['id']}", output)
-                
+
                 logger.info(f"Sent email to {user['email']} (position {position})")
                 return output
             else:
                 # We've processed all users
-                logger.info(f"All users processed, no more emails to send")
-                
+                logger.info("All users processed, no more emails to send")
+
                 # Update state to indicate completion
                 await email_sender.update_state(
                     status="completed"
                 )
-                
+
                 # Return a completion message
                 return {
                     "message": "All emails sent",
@@ -255,30 +272,42 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                     "timestamp": datetime.now().isoformat()
                 }
         except Exception as e:
-            logger.error(f"Error sending email: {str(e)}")
+            logger.error(f"Error sending email: {e!s}")
             return None
-    
+
     # Define the email logger agent with loop
     @in_loop(
         loop_name="email_loop",
-        exit_condition="not message['dependency_messages']['email_sender']['data'].get('has_more', False)",
+        exit_condition=(
+            "not message['dependency_messages']['email_sender']['data']"
+            ".get('has_more', False)"
+        ),
         position=1
     )
-    @stella_agent(name="email_logger", broker=broker, topic=topic, depends_on=["email_sender"])
-    async def email_logger(message):
-        """Log emails sent in a loop"""
+    @stella_agent(
+        name="email_logger",
+        broker=broker,
+        topic=topic,
+        depends_on=["email_sender"]
+    )
+    async def email_logger(message: dict[str, Any]) -> dict[str, Any] | None:
+        """Log email sending results"""
         try:
             # Skip if message is not from our dependency
             source = message.get("source")
             if source != "email_sender" and not source.startswith("email_logger"):
                 return None
-            
-            # Extract the email sender data
-            email_data = message.get("dependency_messages", {}).get("email_sender", {}).get("data", {})
-            
+
+            # Extract the email data
+            email_data = (
+                message.get("dependency_messages", {})
+                .get("email_sender", {})
+                .get("data", {})
+            )
+
             # In a real application, this would log to a database or monitoring system
             # For this example, we'll just create a log entry
-            
+
             # Prepare the output
             output = {
                 "user_id": email_data.get("user_id"),
@@ -289,33 +318,33 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                 "position": email_data.get("position"),
                 "timestamp": datetime.now().isoformat()
             }
-            
+
             # Get current state
             state = await email_logger.get_state()
-            
+
             # Update state
             await email_logger.update_state(
                 emails_logged=state.get("emails_logged", 0) + 1,
                 last_logged=email_data.get("email"),
                 status="active"
             )
-            
+
             # Store the log in memory
             await email_logger.set_memory(f"log_{email_data.get('user_id')}", output)
-            
-            logger.info(f"Logged email to {email_data.get('email')} (position {email_data.get('position')})")
-            
+
+            logger.info(f"Email logger processing position: {email_data.get('position')}")
+
             # Check if this is the last email
             if not email_data.get("has_more", False):
-                logger.info("All emails processed, signaling completion")
+                logger.info("All emails logged, no more to process")
                 global workflow_complete
                 workflow_complete = True
-                
+
                 # Generate campaign summary immediately
                 user_list_state = await user_list.get_state()
                 email_sender_state = await email_sender.get_state()
                 email_logger_state = await email_logger.get_state()
-                
+
                 # Prepare the summary
                 summary = {
                     "campaign_type": user_list_state.get("campaign_type", "unknown"),
@@ -325,26 +354,26 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                     "completion_time": datetime.now().isoformat(),
                     "status": "completed"
                 }
-                
+
                 # Store the summary in memory
                 await campaign_summary.set_memory("campaign_summary", summary)
-                logger.info(f"Generated campaign summary: {summary}")
-            
+                logger.info(f"Campaign summary: {summary['emails_sent']} emails sent")
+
             return output
         except Exception as e:
-            logger.error(f"Error logging email: {str(e)}")
+            logger.error(f"Error logging email: {e!s}")
             return None
-    
+
     # Define the campaign summary agent
     @stella_agent(name="campaign_summary", broker=broker, topic=topic, depends_on=["email_logger"])
-    async def campaign_summary(message):
+    async def campaign_summary(message: dict[str, Any]) -> dict[str, Any] | None:
         """Generate a summary of the email campaign"""
         try:
             # Skip if workflow is not complete
             global workflow_complete
             if not workflow_complete:
                 return None
-            
+
             # Try to get the summary from memory first
             try:
                 summary = await campaign_summary.get_memory("campaign_summary")
@@ -354,12 +383,12 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
             except Exception:
                 # If memory retrieval fails, generate a new summary
                 pass
-            
+
             # Get states from all agents
             user_list_state = await user_list.get_state()
             email_sender_state = await email_sender.get_state()
             email_logger_state = await email_logger.get_state()
-            
+
             # Prepare the summary
             summary = {
                 "campaign_type": user_list_state.get("campaign_type", "unknown"),
@@ -369,7 +398,7 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                 "completion_time": datetime.now().isoformat(),
                 "status": "completed"
             }
-            
+
             # Update state
             await campaign_summary.update_state(
                 campaign_type=summary["campaign_type"],
@@ -378,36 +407,36 @@ async def setup_workflow(broker, topic: str, campaign_type: str):
                 emails_delivered=summary["emails_delivered"],
                 status="completed"
             )
-            
+
             # Store the summary in memory
             await campaign_summary.set_memory("campaign_summary", summary)
-            
+
             logger.info(f"Generated new campaign summary: {summary}")
             return summary
         except Exception as e:
-            logger.error(f"Error generating campaign summary: {str(e)}")
+            logger.error(f"Error generating campaign summary: {e!s}")
             return None
-    
+
     return broker
 
-async def run_email_campaign(campaign_type: str) -> Dict[str, Any]:
+async def run_email_campaign(campaign_type: str) -> dict:
     """Run an email campaign for the specified type"""
     global workflow_complete
     workflow_complete = False
     broker = None
-    
+
     try:
         # Create broker
         broker = RedisBroker(get_redis_config())
         await broker.connect()
-        
+
         # Setup workflow
         await setup_workflow(broker, workflow_topic, campaign_type)
-        
+
         # Start workflow
         logger.info(f"Starting email campaign workflow for {campaign_type}")
         await stella_agent.start_workflow()
-        
+
         # Wait for processing to complete
         for _ in range(30):  # Try for up to 30 seconds
             if workflow_complete:
@@ -416,101 +445,103 @@ async def run_email_campaign(campaign_type: str) -> Dict[str, Any]:
                 await asyncio.sleep(1)
                 break
             await asyncio.sleep(1)
-        
+
         # Get the campaign summary
         summary_agent = stella_agent.get_agents().get("campaign_summary", {}).get("handler")
         if summary_agent:
             try:
                 summary = await summary_agent.get_memory("campaign_summary")
                 if summary:
-                    logger.info(f"Retrieved campaign summary")
+                    logger.info("Retrieved campaign summary")
                     return summary
                 else:
                     # Try to generate the summary directly
                     summary = await summary_agent()
                     if summary:
-                        logger.info(f"Generated campaign summary directly")
+                        logger.info("Generated campaign summary directly")
                         return summary
                     else:
                         logger.error("Failed to generate campaign summary")
             except Exception as e:
-                logger.error(f"Error retrieving campaign summary: {str(e)}")
-        
+                logger.error(f"Error retrieving campaign summary: {e!s}")
+
         if not workflow_complete:
-            logger.error(f"Campaign processing timed out")
-            
+            logger.error("Campaign processing timed out")
+
             # Create a partial summary from available state
             agents = stella_agent.get_agents()
             user_list_agent = agents.get("user_list", {}).get("handler")
             email_sender_agent = agents.get("email_sender", {}).get("handler")
-            
+
             if user_list_agent and email_sender_agent:
                 try:
                     user_list_state = await user_list_agent.get_state()
                     email_sender_state = await email_sender_agent.get_state()
-                    
+
                     return {
                         "campaign_type": campaign_type,
                         "total_users": user_list_state.get("users_count", 0),
                         "emails_sent": email_sender_state.get("emails_sent", 0),
-                        "emails_delivered": email_sender_state.get("emails_sent", 0),  # Assume all delivered
+                        # Assume all sent emails were delivered
+                        "emails_delivered": email_sender_state.get("emails_sent", 0),
                         "completion_time": datetime.now().isoformat(),
                         "status": "partial"
                     }
                 except Exception as e:
-                    logger.error(f"Error creating partial summary: {str(e)}")
-        
+                    logger.error(f"Error creating partial summary: {e!s}")
+
         # If all else fails, return a basic summary
         return {
             "campaign_type": campaign_type,
             "status": "unknown",
             "timestamp": datetime.now().isoformat()
         }
-    
+
     except Exception as e:
-        logger.error(f"Error running campaign: {str(e)}")
+        logger.error(f"Error running email campaign: {e!s}")
         return {
             "campaign_type": campaign_type,
             "status": "error",
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
-    
+
     finally:
         # Stop workflow and clean up
         try:
             await stella_agent.stop_workflow()
         except Exception as e:
-            logger.error(f"Error stopping workflow: {str(e)}")
-        
+            logger.error(f"Error in workflow: {e!s}")
+            sys.exit(1)
+
         if broker:
             try:
                 await broker.close()
             except Exception as e:
-                logger.error(f"Error closing broker: {str(e)}")
+                logger.error(f"Error closing broker: {e!s}")
 
-async def main():
+async def main() -> None:
     """Main entry point"""
     global output_filename
-    
+
     # Generate a unique output filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_filename = f"email_campaign_results_{timestamp}.json"
-    
+
     # Campaign types to run
     campaign_types = ["newsletter", "product_update"]
-    
+
     # Store results
     results = []
-    
+
     try:
         # Run each campaign type
         for campaign_type in campaign_types:
             logger.info(f"Starting {campaign_type} campaign")
-            
+
             # Run the campaign
             summary = await run_email_campaign(campaign_type)
-            
+
             if summary:
                 # Check if the campaign was successful
                 if summary.get("status") == "completed":
@@ -533,12 +564,12 @@ async def main():
                     "status": "failed",
                     "timestamp": datetime.now().isoformat()
                 })
-        
+
         # Calculate success metrics
         successful = sum(1 for r in results if r.get("status") == "completed")
         partial = sum(1 for r in results if r.get("status") == "partial")
         failed = sum(1 for r in results if r.get("status") not in ["completed", "partial"])
-        
+
         # Save results to file
         with open(output_filename, 'w') as f:
             json.dump({
@@ -549,24 +580,25 @@ async def main():
                 "failed_campaigns": failed,
                 "results": results
             }, f, indent=2)
-        
+
         print(f"\nResults saved to {output_filename}")
-        
+
         # Print summary
-        print(f"\nCampaign Summary:")
+        print("\nCampaign Summary:")
         print(f"  Total campaigns: {len(campaign_types)}")
         print(f"  Successful: {successful}")
         print(f"  Partial: {partial}")
         print(f"  Failed: {failed}")
-    
+
     except Exception as e:
-        logger.error(f"Error in main: {str(e)}")
+        logger.error(f"Error in main: {e!s}")
         raise
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nProcessing interrupted by user")
+        logger.info("Workflow interrupted by user")
     except Exception as e:
-        print(f"Error: {str(e)}") 
+        logger.error(f"Error in workflow: {e!s}")
+        sys.exit(1)

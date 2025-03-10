@@ -10,4 +10,4 @@ class Colors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
-    ORANGE = '\033[38;5;208m'  # Add orange color 
+    ORANGE = '\033[38;5;208m'  # Add orange color

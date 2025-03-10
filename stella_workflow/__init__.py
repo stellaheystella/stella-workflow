@@ -1,18 +1,17 @@
-from .workflow import (
-    stella_agent,
-    BrokerFactory,
-    Colors,
-    ColoredFormatter,
-    logger,
-)
+"""Stella Workflow package."""
 
-from .loop import (
-    in_loop,
-)
+from .brokers.base import BrokerFactory
+from .loop import in_loop
+from .workflow import ColoredFormatter, Colors, StellaAgent, logger
 
-from .auto import (
-    AutoStellaAgent,
-    LLMInterface,
-    FunctionCall,
-    FunctionCallPlan,
-)
+__all__ = [
+    'BrokerFactory',
+    'ColoredFormatter',
+    'Colors',
+    'StellaAgent',
+    'in_loop',
+    'logger',
+]
+
+# Alias for backward compatibility
+stella_agent = StellaAgent

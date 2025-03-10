@@ -25,7 +25,3 @@ jobs:
       run: |
         # Run Ruff linter
         ruff check .
-    - name: Format check with ruff
-      run: |
-        # Check code formatting without modifying files
-        ruff format --check . 

@@ -1,0 +1,54 @@
+{
+  "valid_records": [
+    {
+      "id": 1,
+      "name": "Product A",
+      "price": 29.99,
+      "category": "electronics",
+      "price_with_tax": 32.99,
+      "processed_at": "2025-03-09T16:32:42.091024",
+      "is_valid": true,
+      "validation_errors": []
+    },
+    {
+      "id": 2,
+      "name": "Product B",
+      "price": 49.99,
+      "category": "clothing",
+      "price_with_tax": 54.99,
+      "processed_at": "2025-03-09T16:32:42.091039",
+      "is_valid": true,
+      "validation_errors": []
+    },
+    {
+      "id": 3,
+      "name": "Product C",
+      "price": 19.99,
+      "category": "home",
+      "price_with_tax": 21.99,
+      "processed_at": "2025-03-09T16:32:42.091049",
+      "is_valid": true,
+      "validation_errors": []
+    }
+  ],
+  "invalid_records": [
+    {
+      "id": 4,
+      "price": 19.99,
+      "category": "home",
+      "price_with_tax": 21.99,
+      "processed_at": "2025-03-09T16:32:42.091058",
+      "is_valid": false,
+      "validation_errors": [
+        "Missing required field: name"
+      ]
+    }
+  ],
+  "total_records": 4,
+  "valid_count": 3,
+  "invalid_count": 1,
+  "original_source": "sample_database",
+  "original_timestamp": "2025-03-09T16:32:39.314177",
+  "transformation_timestamp": "2025-03-09T16:32:42.091064",
+  "validation_timestamp": "2025-03-09T16:32:44.857331"
+}
